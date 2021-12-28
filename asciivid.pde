@@ -1,61 +1,71 @@
-isurface.setAlwaysOnTop(true);mport processing.video.*;
+import processing.video.*;
 import themidibus.*;
 
+// variable declarations
 Capture video;
 MidiBus bus;
 
-//String letterOrder = " •♦■#$░▒▓█";
+Mover[] movers = new Mover[4];
+Attractor att;
+
 String letterOrder = " •♦■░▒▓█";
 String glyphs = "☻♫♥♦";
-color[] gcolors = {color(88, 194, 64),color(62,214,156),color(153,62,214),color(214,62,133)};
 char[] glypha = glyphs.toCharArray();
 char[] letters;
-float amt, rx, ry;
+
+float[] bright;
+float[] lastSize = {0.0, 0.0, 0.0, 0.0};
+float amt;
+float g = 0.6;
+float fontSize = 8;
+
+// video color array
 color one = color(200, 255, 200);
 color two = color(230, 25, 230);
 color three = color(0, 100, 255);
 color four = color(0, 5, 50);
 color[] vcolors = {one, two, three, four};
-
-float[] bright;
-float[] lastSize = {0.0, 0.0, 0.0, 0.0};
-char[] chars;
-color startc, stopc, fill1;
 color[] colors;
 
-PFont font;
-float fontSize = 8;
-int bmaxheight, bwidth, c1size;
-float g = 0.6;
+char[] chars;
 
-Mover[] movers = new Mover[4];
-Attractor att;
+// based on characters, using an 8x8 font
+// 52 * 8 = 416, 35 * 8 = 280
+int width = 52;
+int height = 35;
+int totalCharacters = width * height;
+int screenWidth = int(floor(width * fontSize));
+int screenHeight = int(floor(height * fontSize));
+
+PFont font;
+PVector walkerpos = new PVector(screenWidth/2, screenHeight/2);
+
+public void settings() {
+  size(screenWidth, screenHeight);
+}
 
 void setup() { 
-  bus = new MidiBus(this, "vm3", -1);
-  size(416, 280);
   surface.setAlwaysOnTop(true);
+  colorMode(RGB);
 
+  // use your device name here
+  video = new Capture(this, width, height, "IPEVO Do-Cam");
+  video.start();
+  
+  // will need to provide your own virtual midi device here
+  bus = new MidiBus(this, "vm3", -1);
+  
+  // a nice nostalgic font
+  font = createFont("Ac437_IBM_EGA_8x8.ttf", 8);
+
+  // set up the movers, and attractor, which float around the screen
   for (int i = 0; i < movers.length; i++) {
-    movers[i] = new Mover(10,random(416),random(280)); 
-    /* movers[i].colorf = gcolors[i]; */
-    movers[i].colorf = color(255, 255, 255);
+    movers[i] = new Mover(0.8, random(416), random(280), 8); 
+    // glyphs all white for now, could easily use lerp or an array
+    movers[i].fcolor = color(255, 255, 255);
     movers[i].glyph = glypha[i];
   }
   att = new Attractor(208, 140, 100);
-  rx = 208;
-  ry = 140;
-
-  c1size = 0;
-  
-  video = new Capture(this, 52, 35, "IPEVO Do-Cam");
-  video.start();
-  
-  int count = 52 * 35;
-
-  font = createFont("Ac437_IBM_EGA_8x8.ttf", 8);
-
-  colorMode(RGB);
 
   letters = new char[256];
   colors = new color[256];
@@ -67,106 +77,105 @@ void setup() {
     colors[i] = lerpColors(amt, vcolors);
   }
 
-  chars = new char[count];
-
-  bright = new float[count];
-  for (int i = 0; i < count; i++) {
+  chars = new char[totalCharacters];
+  bright = new float[totalCharacters];
+  for (int i = 0; i < totalCharacters; i++) {
     bright[i] = 128;
   }
 }
-
 
 void captureEvent(Capture c) {
   c.read();
 }
 
-
 void draw() {
   background(0);
-
   pushMatrix();
-
   textFont(font, fontSize);
-
   int index = 0;
+
   video.loadPixels();
-
-  rx += random(-1, 1);
-  ry += random(-1, 1);
-  if(rx < 0) {
-    rx = 416;
-  }
-  if(rx > 416) {
-    rx = 0;
-  }
-
-  //prevent going off top or bottom
-  if(ry < 0){
-    ry = 280;
-  }
-  if(ry > 280){
-    ry = 0;
-  }
-
-  att.pos.x = rx;
-  att.pos.y = ry;
-  att.show();
+  doRandomWalk();
 
   for (int y = 0; y < 35; y++) {
-
+    // move 9 pixels to add some space
     translate(0, 9);
-
     pushMatrix();
+
     for (int x = 0; x < 52; x++) {
-      
       int pixelColor = video.pixels[index];
       int r = (pixelColor >> 16) & 0xff;
       int g = (pixelColor >> 8) & 0xff;
       int b = pixelColor & 0xff;
-
       float luminance = 0.3*r + 0.59*g + 0.11*b;
-
       float diff = luminance - bright[index];
       bright[index] += diff * 0.2;
+      int num = int(bright[index]);
 
       fill(colors[floor(map(index, 0, 1820, 0, 256))]);
-      int num = int(bright[index]);
       textSize(floor(map(num, 0, 256, 2, 10)));
       text(letters[num], 0, 0);
       
-      index++;
-
       translate(8, 0);
+      index++;
     }
     popMatrix();
   }
   popMatrix();
 
+  // set those walkers aspinnin
   for (int i = 0; i < movers.length; i++) {
-    movers[i].position.x += random(0.5);
+    movers[i].pos.x += random(0.5);
     movers[i].update();
     movers[i].display();
     att.attract(movers[i]);
   }
 }
 
+// midi control message arrives
+// using lerp here to smooth out the fast message changes
 void controllerChange(int channel, int number, int value) {
-  float size = map(value, 0, 127, 0, 80);
-  if (abs(lastSize[number-1] - size) > 3) {
-    movers[number-1].csize = lerp(size, lastSize[number-1], 0.5);
+  // we rarely ever hit 127, lower the bar a bit
+  int index = number-1;
+
+  if (abs(lastSize[index] - value) > 5) {
+    float lerped = lerp(value, lastSize[index], 0.5);
+    movers[index].csize = lerped;
+    lastSize[index] = lerped;
   } else {
-    movers[number-1].csize = size;
+    movers[index].csize = value;
+    lastSize[index] = value;
   }
-  lastSize[number-1] = size;
 }
 
-void delay(int time) {
-  int current = millis();
-  while (millis () < current+time) Thread.yield();
-}
-
+// better color interpolation, pass an array
 color lerpColors(float amt, color... colors) {
   if(colors.length==1){ return colors[0]; }
   float cunit = 1.0/(colors.length-1);
   return lerpColor(colors[floor(amt / cunit)], colors[ceil(amt / cunit)], amt%cunit/cunit);
+}
+
+// move the attractor around slowly
+void doRandomWalk() {
+  walkerpos.x += random(-1, 1);
+  walkerpos.y += random(-1, 1);
+
+  if(walkerpos.x < 0) {
+    walkerpos.x = 416;
+  }
+  if(walkerpos.x > 416) {
+    walkerpos.x = 0;
+  }
+
+  //prevent going off top or bottom
+  if(walkerpos.y < 0){
+    walkerpos.y = 280;
+  }
+  if(walkerpos.y > 280){
+    walkerpos.y = 0;
+  }
+
+  att.pos.x = walkerpos.x;
+  att.pos.y = walkerpos.y;
+  att.show();
 }

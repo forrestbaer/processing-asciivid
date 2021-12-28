@@ -10,7 +10,7 @@ class Attractor {
   }
 
   void attract(Mover m) {
-    PVector force = PVector.sub(pos, m.position);
+    PVector force = PVector.sub(pos, m.pos);
     distanceSq = constrain(force.magSq(), 100, 1000);
     strength = (g * (mass * m.mass)) / distanceSq;
     force.setMag(strength);
