@@ -15,7 +15,8 @@ char[] letters;
 
 float[] bright;
 float[] lastSize = {0.0, 0.0, 0.0, 0.0};
-float amt;
+float colorInterpolationAmt;
+// gravity
 float g = 0.6;
 float fontSize = 8;
 
@@ -73,8 +74,8 @@ void setup() {
     int index = int(map(i, 0, 256, 0, letterOrder.length()));
     letters[i] = letterOrder.charAt(index);
     float tm = map(i, 0, 255, 0, 70); 
-    amt = tm/70;
-    colors[i] = lerpColors(amt, vcolors);
+    colorInterpolationAmt = tm/70;
+    colors[i] = lerpColors(colorInterpolationAmt, vcolors);
   }
 
   chars = new char[totalCharacters];
