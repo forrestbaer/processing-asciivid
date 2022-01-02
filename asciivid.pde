@@ -8,7 +8,7 @@ MidiBus bus;
 Mover[] movers = new Mover[4];
 Attractor att;
 
-String letterOrder = " •♦■░▒▓█";
+String letterOrder = "■♦░▒▓█";
 String glyphs = "☻♫♥♦";
 char[] glypha = glyphs.toCharArray();
 char[] letters;
@@ -17,7 +17,7 @@ float[] bright;
 float[] lastSize = {0.0, 0.0, 0.0, 0.0};
 float colorInterpolationAmt;
 // gravity
-float g = 0.6;
+float g = 0.8;
 float fontSize = 8;
 
 // video color array
@@ -61,9 +61,9 @@ void setup() {
 
   // set up the movers, and attractor, which float around the screen
   for (int i = 0; i < movers.length; i++) {
-    movers[i] = new Mover(0.8, random(416), random(280), 8); 
+    movers[i] = new Mover(1.8, random(416), random(280), 8); 
     // glyphs all white for now, could easily use lerp or an array
-    movers[i].fcolor = color(255, 255, 255);
+    movers[i].fcolor = color(255, 255, 255, 175);
     movers[i].glyph = glypha[i];
   }
   att = new Attractor(208, 140, 100);
@@ -100,7 +100,7 @@ void draw() {
 
   for (int y = 0; y < 35; y++) {
     // move 9 pixels to add some space
-    translate(0, 9);
+    translate(0, 8);
     pushMatrix();
 
     for (int x = 0; x < 52; x++) {
